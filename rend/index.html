@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REND — Goodhart's Trap in Cost-Constrained Network Dismantling</title>
+<meta name="description" content="REND: a deep reinforcement learning framework for cost-effective network dismantling, the RGCC metric, and the interpretable Boundary-Cut heuristic.">
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1b1f24; --muted:#5b6470; --line:#e6e8eb;
+    --accent:#b5121b; --accent-2:#0b6bcb; --soft:#f6f7f9; --code:#f0f2f5;
+    --maxw:880px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.65; font-size:17px;
+  }
+  a{color:var(--accent-2); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px}
+  header.hero{padding:64px 22px 40px; text-align:center; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fbfcfd, #fff)}
+  .badge{display:inline-block; font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:14px}
+  h1.title{font-size:44px; line-height:1.08; margin:.1em 0 .15em; letter-spacing:-.01em}
+  h1.title .sub{display:block; font-size:19px; font-weight:500; color:var(--muted); margin-top:14px; line-height:1.45}
+  .authors{margin:22px 0 6px; font-size:16.5px}
+  .authors b{font-weight:600}
+  .affil{color:var(--muted); font-size:14px; max-width:680px; margin:8px auto 0}
+  .btns{margin:26px 0 4px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--fg); font-weight:600; font-size:15px; transition:.15s}
+  .btn:hover{border-color:var(--accent-2); color:var(--accent-2); text-decoration:none; transform:translateY(-1px)}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:#9b0f17; color:#fff}
+  main{padding:8px 0 40px}
+  section{padding:34px 0 6px; border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:none}
+  h2{font-size:27px; margin:.2em 0 .5em; letter-spacing:-.01em}
+  h2 .num{color:var(--accent); font-weight:800; margin-right:.4em}
+  h3{font-size:19px; margin:1.3em 0 .4em}
+  p{margin:.7em 0}
+  .lead{font-size:18.5px; color:#2b313a}
+  figure{margin:26px 0; text-align:center}
+  figure img{max-width:100%; height:auto; border:1px solid var(--line); border-radius:10px; background:#fff}
+  figcaption{font-size:14px; color:var(--muted); margin-top:10px; text-align:left}
+  figcaption b{color:var(--fg)}
+  .callout{background:var(--soft); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:8px; padding:14px 18px; margin:20px 0}
+  .formula{background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:16px 18px; margin:16px 0; text-align:center; font-size:19px; overflow-x:auto}
+  .formula i{font-style:italic}
+  table{border-collapse:collapse; width:100%; margin:18px 0; font-size:14.5px}
+  caption{caption-side:top; text-align:left; color:var(--muted); font-size:14px; margin-bottom:8px}
+  th,td{border:1px solid var(--line); padding:7px 10px; text-align:center}
+  th{background:var(--soft); font-weight:700}
+  td.method,th.method{text-align:left}
+  tr.best td{background:#fff4f4}
+  tr.best td.method{color:var(--accent); font-weight:700}
+  .tag{display:inline-block; font-size:12px; padding:2px 8px; border-radius:6px; background:var(--code); color:var(--muted); margin-left:6px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  .stat{background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:16px}
+  .stat .big{font-size:30px; font-weight:800; color:var(--accent); line-height:1.1}
+  .stat .lbl{font-size:14px; color:var(--muted); margin-top:6px}
+  pre{background:#0f141a; color:#e8edf3; border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:13.5px; line-height:1.5}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  footer{padding:30px 22px 60px; text-align:center; color:var(--muted); font-size:14px}
+  @media (max-width:640px){
+    h1.title{font-size:32px}
+    .grid2{grid-template-columns:1fr}
+    body{font-size:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="badge">Network Science · Deep Reinforcement Learning</div>
+    <h1 class="title">REND
+      <span class="sub">Goodhart's Trap in Cost-Constrained Network Dismantling and Its Remedy</span>
+    </h1>
+    <div class="authors">
+      <b>Changjun Fan</b><sup>1,&#9733;</sup>, <b>Feng Qing</b><sup>1,&#9733;</sup>, <b>Li Zeng</b><sup>1,&#9733;</sup>,
+      Suoyi Tan<sup>1</sup>, Aming Li<sup>2</sup>, Xin Lu<sup>1</sup>, Jincai Huang<sup>1</sup>, Zhong Liu<sup>1</sup>
+    </div>
+    <div class="affil">
+      <sup>1</sup> College of Systems Engineering, National University of Defense Technology, Changsha, China &nbsp;·&nbsp;
+      <sup>2</sup> Center for Systems and Control, School of Advanced Manufacturing and Robotics, Peking University, Beijing, China
+      <br><span style="font-size:13px">&#9733; These authors contributed equally.</span>
+    </div>
+    <div class="btns">
+      <a class="btn primary" href="https://doi.org/10.5281/zenodo.20841196" target="_blank" rel="noopener">&#128196; Paper</a>
+      <a class="btn" href="https://github.com/crack521/REND" target="_blank" rel="noopener">&#128187; Code</a>
+      <a class="btn" href="https://doi.org/10.5281/zenodo.20841196" target="_blank" rel="noopener">&#128202; Data &amp; Results</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="tldr">
+    <h2><span class="num">TL;DR</span>When a measure becomes a target, it stops being a good measure.</h2>
+    <p class="lead">
+      State-of-the-art cost-aware dismantling models cheat: under the conventional metric they fragment a
+      network by harvesting huge numbers of cheap, peripheral nodes — mathematically optimal, operationally absurd.
+      This is a textbook <b>Goodhart's law trap</b>. We fix the metric with the
+      <b>Relative Giant Connected Component (RGCC)</b>, train a reinforcement-learning agent <b>REND</b> on it, and
+      then distill the learned policy into a fully transparent heuristic, <b>Boundary-Cut</b>, that needs zero training.
+    </p>
+    <div class="grid2">
+      <div class="stat"><div class="big">50–70%</div><div class="lbl">fewer nodes removed than existing methods on real-world networks</div></div>
+      <div class="stat"><div class="big">3–6&times;</div><div class="lbl">more fragments generated at the same cost budget</div></div>
+    </div>
+  </section>
+
+  <section id="abstract">
+    <h2><span class="num">1</span>Abstract</h2>
+    <p>
+      When a metric becomes an optimization target, it ceases to be a good metric. This is a Goodhart's law trap,
+      and it poses a growing risk as AI systems are increasingly deployed to optimize complex objectives. Here we
+      uncover a concrete instance of this trap in <b>cost-constrained network dismantling</b> — the problem of
+      removing an optimal set of nodes to fragment a network under heterogeneous removal costs. The conventional
+      metric, which rewards faster giant connected component (GCC) decline at lower cost, inadvertently incentivizes
+      massive removal of cheap peripheral nodes. Such strategies are mathematically optimal under the metric but
+      operationally infeasible because they ignore the implicit cost of each removal action. To close the trap, we
+      introduce the <b>Relative Giant Connected Component (RGCC)</b>, a corrected measure that explicitly penalizes
+      excessive removal by normalizing GCC over remaining nodes. Using RGCC, we develop <b>REND</b>, a deep
+      reinforcement learning model to maximize cost-effective fragmentation. On real-world networks, REND removes
+      50–70% fewer nodes yet generates 3–6 times more fragments than existing methods. Interpretability reveals that
+      REND preferentially targets <b>2-core boundary nodes</b>, which inspires a simple transparent heuristic
+      (<b>Boundary-Cut</b>) that matches the black-box AI's performance with zero training.
+    </p>
+  </section>
+
+  <section id="problem">
+    <h2><span class="num">2</span>The Problem: a Goodhart's Trap</h2>
+    <p>
+      Cost-constrained dismantling looks for a node-removal sequence
+      (<i>v</i><sub>1</sub>, &hellip;, <i>v</i><sub>N</sub>) that minimizes the
+      <b>Accumulated Normalized Connectivity (ANC)</b>:
+    </p>
+    <div class="formula">
+      <i>R</i><sub>&sigma;</sub> = &sum;<sub><i>k</i>=1</sub><sup><i>N</i></sup>
+      &nbsp;[ &sigma;(<i>G<sub>k</sub></i>) / &sigma;(<i>G</i>) ] &middot; <i>c</i>(<i>v<sub>k</sub></i>)
+    </div>
+    <p>
+      where &sigma; is the GCC size and <i>c</i>(<i>v<sub>k</sub></i>) the normalized removal cost. A lower ANC
+      curve is conventionally read as a more cost-effective strategy. The catch: a drop in GCC can come from two very
+      different processes — genuine <b>structural fragmentation</b> (removing critical nodes that break the network
+      apart) or trivial <b>shrinkage</b> (removing many cheap leaves so fewer nodes simply remain). Because peripheral
+      nodes are cheap, an optimizer can drive the ANC curve down by mass-harvesting them. FINDER, a state-of-the-art
+      RL agent, learned exactly this shortcut; even a trivial <em>MinCost</em> greedy baseline matches it under ANC.
+    </p>
+    <figure>
+      <img src="images/f1.jpg" alt="Measurement problem in cost-constrained network dismantling">
+      <figcaption>
+        <b>Fig. 1 — The measurement problem.</b> Under the GCC-based ANC metric, FINDER (and the trivial MinCost
+        heuristic) achieve low cost by removing far more nodes than REND. Mass-removing cheap peripheral nodes is
+        "optimal" on the metric yet operationally infeasible and structurally fragile — a manifestation of Goodhart's law.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="rgcc">
+    <h2><span class="num">3</span>The Remedy: the RGCC Metric</h2>
+    <p>
+      We replace the <em>static</em> denominator <i>N</i> with a <em>dynamic</em> one — the number of remaining nodes:
+    </p>
+    <div class="formula">
+      RGCC<sub><i>k</i></sub> = &sigma;<sub>gcc</sub>(<i>G<sub>k</sub></i>) / <i>N</i><sub>left</sub>
+      = &sigma;<sub>gcc</sub>(<i>G<sub>k</sub></i>) / (<i>N</i> &minus; <i>k</i>)
+    </div>
+    <p>and recompute the evaluation objective as</p>
+    <div class="formula">
+      <i>R</i><sub>RGCC</sub> = &sum;<sub><i>k</i>=1</sub><sup><i>N</i></sup>
+      &nbsp;[ &sigma;<sub>gcc</sub>(<i>G<sub>k</sub></i>) / (<i>N</i> &minus; <i>k</i>) ] &middot; <i>c</i>(<i>v<sub>k</sub></i>)
+    </div>
+    <div class="callout">
+      <b>Why this simple change works.</b>
+      <p style="margin:.5em 0 0">
+        <b>(i) Penalizes ineffective removals</b> — removing a node outside the GCC shrinks <i>N</i><sub>left</sub>
+        while &sigma;<sub>gcc</sub> stays put, so RGCC <em>rises</em>.
+        <b>(ii) Distinguishes fragmentation from shrinkage</b> — a single leaf removal leaves RGCC unchanged, while
+        a removal that disconnects many nodes drops it sharply.
+        <b>(iii) Encodes a cost–scale trade-off</b> — every removal shrinks the denominator, raising the bar for all
+        future actions.
+      </p>
+    </div>
+  </section>
+
+  <section id="rend">
+    <h2><span class="num">4</span>REND: an RGCC-Optimized RL Agent</h2>
+    <p>
+      Following the FINDER paradigm, REND is trained fully data-driven on millions of small synthetic
+      Barabási–Albert graphs (30–50 nodes), with no hand-designed heuristics. Each dismantling episode is a Markov
+      decision process: the state is the residual graph, the action selects a node to remove, and the reward is the
+      decrease in the RGCC-based objective. A graph-neural-network <b>encoder</b> embeds nodes (initialized with
+      degree/cost features) via neighborhood aggregation; a parameterized Q-function <b>decoder</b> scores actions.
+    </p>
+    <p>
+      Directly optimizing the RGCC reward is unstable because the time-varying denominator (<i>N</i>&minus;<i>k</i>)
+      couples three node-dependent terms. We therefore train on a <b>lower bound</b> that fixes the denominator at
+      <i>N</i> and decouples connectivity from cost:
+    </p>
+    <div class="formula">
+      <i>R</i> &ge; <i>R</i><sub>lb</sub> = &minus; &sum;<sub><i>k</i>=1</sub><sup><i>N&tau;</i></sup>
+      [ &sigma;<sub>gcc</sub>(<i>G<sub>k</sub></i>)/<i>N</i> + <i>c</i>(<i>v<sub>k</sub></i>) ]
+    </div>
+    <figure>
+      <img src="images/f2.jpg" alt="Overview of the REND framework">
+      <figcaption>
+        <b>Fig. 2 — The REND framework.</b> Offline training on synthetic graphs through states (residual graph),
+        actions (node to remove) and RGCC-based rewards. A GNN encoder produces node embeddings; the decoder maps them
+        to Q-values; an &epsilon;-greedy policy and n-step Q-learning with experience replay refine the agent. Once
+        trained, REND is applied greedily to unseen real-world networks (batch removal of up to 1% of nodes per step).
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="results">
+    <h2><span class="num">5</span>Performance</h2>
+    <p>
+      REND is trained once on 30–50 node graphs and evaluated, unchanged, on larger synthetic graphs and nine
+      real-world networks. Under the corrected <i>R</i><sub>RGCC</sub> metric it consistently and significantly
+      outperforms all baselines — for both degree- and random-cost, on synthetic and real data. Compared with the
+      second-best method, REND lowers the ANC score by an average of <b>4.0%</b> (vs. MinSum) on synthetic graphs and
+      <b>20.7%</b> (vs. GND) on real networks. Notably, FINDER — highly optimized for the old metric — now performs
+      the <em>worst</em> under RGCC.
+    </p>
+    <figure>
+      <img src="images/f3.jpg" alt="Performance of REND on synthetic and real-world networks">
+      <figcaption>
+        <b>Fig. 3 — Performance under RGCC.</b> REND vs. HDA, MinSum, GND, CoreHD across synthetic scales
+        (a, c) and nine real-world networks (b, d), under degree-cost and random-cost. REND is consistently lowest
+        (better). Panels (e–j) show ANC curves on DBLP, Flickr and YouTube.
+      </figcaption>
+    </figure>
+
+    <table>
+      <caption><b>Synthetic graphs, degree-cost.</b> Mean&plusmn;std of <i>R</i><sub>RGCC</sub>&times;100 over 100 BA instances per scale (lower is better).</caption>
+      <thead>
+        <tr><th class="method">Method</th><th>30–50</th><th>50–100</th><th>100–200</th><th>200–300</th><th>300–400</th><th>400–500</th></tr>
+      </thead>
+      <tbody>
+        <tr class="best"><td class="method">REND</td><td>58.52&plusmn;3.58</td><td>55.24&plusmn;1.58</td><td>53.29&plusmn;1.04</td><td>52.83&plusmn;0.72</td><td>52.67&plusmn;0.62</td><td>52.48&plusmn;0.52</td></tr>
+        <tr><td class="method">MinSum</td><td>59.87&plusmn;1.90</td><td>57.36&plusmn;1.66</td><td>55.34&plusmn;1.19</td><td>54.13&plusmn;0.79</td><td>53.46&plusmn;0.67</td><td>53.04&plusmn;0.53</td></tr>
+        <tr><td class="method">HDA</td><td>60.34&plusmn;2.21</td><td>58.56&plusmn;1.83</td><td>56.59&plusmn;1.29</td><td>55.49&plusmn;0.87</td><td>54.91&plusmn;0.81</td><td>54.66&plusmn;0.70</td></tr>
+        <tr><td class="method">GND</td><td>60.90&plusmn;3.09</td><td>58.54&plusmn;2.22</td><td>56.65&plusmn;1.43</td><td>55.44&plusmn;1.10</td><td>54.59&plusmn;0.93</td><td>54.45&plusmn;0.92</td></tr>
+        <tr><td class="method">CoreHD</td><td>66.15&plusmn;2.67</td><td>65.09&plusmn;2.22</td><td>60.46&plusmn;1.37</td><td>58.43&plusmn;0.98</td><td>57.05&plusmn;0.80</td><td>56.15&plusmn;0.67</td></tr>
+        <tr><td class="method">FINDER</td><td>86.18&plusmn;2.77</td><td>89.42&plusmn;2.52</td><td>92.24&plusmn;2.02</td><td>93.67&plusmn;1.82</td><td>94.21&plusmn;1.63</td><td>94.80&plusmn;1.59</td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <caption><b>Synthetic graphs, random-cost.</b> Mean&plusmn;std of <i>R</i><sub>RGCC</sub>&times;100 over 100 BA instances per scale (lower is better).</caption>
+      <thead>
+        <tr><th class="method">Method</th><th>30–50</th><th>50–100</th><th>100–200</th><th>200–300</th><th>300–400</th><th>400–500</th></tr>
+      </thead>
+      <tbody>
+        <tr class="best"><td class="method">REND</td><td>52.00&plusmn;4.01</td><td>49.37&plusmn;2.81</td><td>47.85&plusmn;2.59</td><td>48.16&plusmn;1.81</td><td>48.47&plusmn;1.60</td><td>48.73&plusmn;1.30</td></tr>
+        <tr><td class="method">MinSum</td><td>56.24&plusmn;4.31</td><td>53.87&plusmn;3.21</td><td>51.61&plusmn;2.36</td><td>50.44&plusmn;1.86</td><td>49.86&plusmn;1.33</td><td>49.68&plusmn;1.23</td></tr>
+        <tr><td class="method">HDA</td><td>56.22&plusmn;4.36</td><td>54.78&plusmn;3.08</td><td>52.33&plusmn;2.68</td><td>51.39&plusmn;1.70</td><td>50.84&plusmn;1.54</td><td>50.92&plusmn;1.14</td></tr>
+        <tr><td class="method">GND</td><td>58.21&plusmn;5.31</td><td>55.50&plusmn;3.50</td><td>53.18&plusmn;2.38</td><td>52.04&plusmn;1.96</td><td>51.25&plusmn;1.56</td><td>51.17&plusmn;1.41</td></tr>
+        <tr><td class="method">CoreHD</td><td>62.96&plusmn;5.10</td><td>61.54&plusmn;3.17</td><td>56.64&plusmn;2.65</td><td>54.67&plusmn;1.79</td><td>53.24&plusmn;1.47</td><td>52.50&plusmn;1.27</td></tr>
+        <tr><td class="method">FINDER</td><td>74.02&plusmn;7.16</td><td>79.97&plusmn;6.83</td><td>83.84&plusmn;6.24</td><td>87.05&plusmn;4.88</td><td>86.86&plusmn;4.85</td><td>86.70&plusmn;5.01</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="fragments">
+    <h2><span class="num">6</span>More Fragments, Fewer Nodes</h2>
+    <p>
+      Compared with GND on the <b>DBLP</b> co-authorship network, at the same 60% cost budget both reduce the GCC to
+      ~10% of its original size — but REND removes only <b>20.5%</b> of nodes vs. GND's 53.7%, and produces
+      <b>~3.7&times;</b> more fragments (8,705 vs. 2,371).
+    </p>
+    <figure>
+      <img src="images/f4.jpg" alt="REND produces more fragments with fewer nodes on DBLP">
+      <figcaption>
+        <b>Fig. 4 — DBLP dismantling.</b> RGCC curves and structural snapshots at 10/20/40/60% cost. Gray = residual
+        GCC, red = fragments outside the GCC. At equal cost REND removes far fewer nodes while generating many more
+        fragments — genuinely cost-effective fragmentation.
+      </figcaption>
+    </figure>
+    <p>
+      On the real-world <b>Openflights</b> airline network (node cost = total flights), at a 50% budget REND removes
+      <b>19.6%</b> of nodes vs. GND's 37.2%, generates <b>~6.3&times;</b> more fragments (1,646 vs. 261), and leaves a
+      residual GCC less than half the size (22.2% vs. 51.5%). Its top targets are not high-degree hubs but
+      <em>structural holes</em> — e.g. four small Alaskan airports whose removal isolates 31% of Alaskan airports.
+    </p>
+    <figure>
+      <img src="images/f5.jpg" alt="Dismantling the Openflights network">
+      <figcaption>
+        <b>Fig. 5 — Openflights.</b> Geographic view before/after attack under a 50% cost budget. REND (c, d) removes
+        fewer airports (blue) yet creates more fragments (red) than GND (a, b), confirming superiority on RGCC, GCC
+        size, node count and fragment count simultaneously.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="boundarycut">
+    <h2><span class="num">7</span>Demystifying REND: the Boundary-Cut Heuristic</h2>
+    <p>
+      What did the black box learn? Across top-<i>K</i> removals, <b>over 90%</b> of REND's targets are
+      <b>2-core boundary nodes</b> — nodes inside the 2-core that still touch the 1-shell. They are neither expensive
+      hubs nor trivial leaves, but low-cost bridges between the periphery and the core.
+    </p>
+    <p>
+      We distill this into <b>Boundary-Cut</b>: iteratively perform 2-core decomposition, remove boundary nodes in
+      descending order of a cost-effectiveness ratio (associated 1-shell nodes &divide; removal cost), and repeat.
+      Despite needing <em>no training</em>, it matches — and sometimes beats — REND:
+      <b>0.3229 vs. 0.3369</b> (degree-cost) and <b>0.3049 vs. 0.315</b> (random-cost) on <i>R</i><sub>RGCC</sub>.
+    </p>
+    <figure>
+      <img src="images/f6.jpg" alt="Demystifying REND into the Boundary-Cut heuristic">
+      <figcaption>
+        <b>Fig. 6 — Boundary-Cut.</b> (a) Top-50 REND nodes in HI-II-14 sit at the core–periphery interface.
+        (b) Definition of a 2-core boundary node. (c) &gt;90% of REND's top-<i>K</i> removals are such nodes.
+        (d) The transparent, training-free heuristic that reproduces the AI's performance.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="cite">
+    <h2><span class="num">8</span>Citation</h2>
+<pre><code>@article{fan2026goodhart,
+  title   = {Goodhart's trap in cost-constrained network dismantling and its remedy},
+  author  = {Fan, Changjun and Qing, Feng and Zeng, Li and Tan, Suoyi and
+             Li, Aming and Lu, Xin and Huang, Jincai and Liu, Zhong},
+  year    = {2026}
+}</code></pre>
+    <p style="margin-top:18px">
+      Code: <a href="https://github.com/crack521/REND">github.com/crack521/REND</a> &nbsp;·&nbsp;
+      Data &amp; Results: <a href="https://doi.org/10.5281/zenodo.20841196">10.5281/zenodo.20841196</a>
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    REND project page &middot; National University of Defense Technology &amp; Peking University<br>
+    Built on the <a href="https://www.nature.com/articles/s42256-020-0177-2">FINDER</a> paradigm.
+  </div>
+</footer>
+
+</body>
+</html>
