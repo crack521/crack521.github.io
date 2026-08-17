@@ -63,9 +63,54 @@
   pre{background:#0f141a; color:#e8edf3; border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:13.5px; line-height:1.5}
   code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   footer{padding:30px 22px 60px; text-align:center; color:var(--muted); font-size:14px}
+
+  /* ---------- interactive demo ---------- */
+  section.demo{background:linear-gradient(180deg,#fafbfd,#fff)}
+  .badge2{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--accent);font-weight:700;padding:3px 10px;border-radius:6px;vertical-align:middle;margin-left:8px}
+  .demo-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:20px;align-items:start;margin-top:16px}
+  .demo-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px 12px 8px}
+  .demo-card h4{margin:2px 0 6px;font-size:14px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+  svg.demo-svg{width:100%;height:auto;display:block;background:#fcfdff;border-radius:8px;touch-action:manipulation}
+  svg.demo-svg line.edge{stroke:#c9d0da;stroke-width:1.4;transition:stroke .25s}
+  svg.demo-svg line.edge.gone{stroke:#eef1f4}
+  svg.demo-svg circle.node{stroke:#ffffff;stroke-width:1.4;cursor:pointer;transition:opacity .25s,fill .3s,r .2s}
+  svg.demo-svg circle.node.removed{opacity:.1;pointer-events:none}
+  svg.chart-svg{width:100%;height:auto;display:block}
+  .ctrls{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px}
+  .ctrls .sep{flex-basis:100%;height:0}
+  .dbtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;color:var(--fg);line-height:1.2}
+  .dbtn:hover{border-color:var(--accent-2);color:var(--accent-2)}
+  .dbtn:disabled{opacity:.45;cursor:default}
+  .dbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .dbtn.play{background:var(--accent-2);border-color:var(--accent-2);color:#fff}
+  .dbtn.play:hover{color:#fff}
+  .rdgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 2px}
+  .rd{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center}
+  .rd .v{font-size:20px;font-weight:800;line-height:1.05}
+  .rd .k{font-size:11px;color:var(--muted);margin-top:3px}
+  .rd.anc .v{color:var(--accent-2)}
+  .rd.rgcc .v{color:var(--accent)}
+  .legend{font-size:12.5px;color:var(--muted);display:flex;gap:8px 16px;flex-wrap:wrap;margin-top:10px;align-items:center}
+  .legend span{display:inline-flex;align-items:center}
+  .legend i{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:5px}
+  .legend i.ln{width:16px;height:0;border-radius:0}
+  .explain{min-height:46px;border-radius:8px;border:1px dashed var(--line);padding:10px 12px;font-size:14px;margin-top:12px;background:#fff;transition:.2s;line-height:1.5}
+  .explain b{color:var(--fg)}
+  .explain.up{border-color:var(--accent);background:#fff5f5}
+  .explain.down{border-color:#1a8f3c;background:#f1fbf4}
+  .explain.flat{border-color:#c9a227;background:#fffcef}
+  .scoretab{width:100%;margin:14px 0 2px;font-size:13.5px;border-collapse:collapse}
+  .scoretab th,.scoretab td{border:1px solid var(--line);padding:6px 8px;text-align:center}
+  .scoretab td.m{text-align:left;font-weight:600}
+  .scoretab tr.win td{background:#fff4f4}
+  .scoretab tr.win td.m{color:var(--accent)}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px}
+
   @media (max-width:640px){
     h1.title{font-size:32px}
     .grid2{grid-template-columns:1fr}
+    .demo-grid{grid-template-columns:1fr}
+    .rdgrid{grid-template-columns:repeat(2,1fr)}
     body{font-size:16px}
   }
 </style>
@@ -185,6 +230,76 @@
         future actions.
       </p>
     </div>
+  </section>
+
+  <section id="demo" class="demo">
+    <h2><span class="num">&#9654;</span>See it for yourself<span class="badge2">Interactive</span></h2>
+    <p class="lead">
+      Watch dismantling happen node-by-node on a small toy network and see the two metrics react in real time.
+      The <b>ANC</b> curve (dashed, GCC&nbsp;/&nbsp;<i>N</i>) rewards <em>any</em> shrinkage; the <b>RGCC</b> curve
+      (solid, GCC&nbsp;/&nbsp;<i>N</i><sub>left</sub>) only drops for <em>genuine fragmentation</em>. Try a strategy,
+      or switch to <b>manual mode</b> and click nodes to feel the three properties of RGCC directly.
+    </p>
+
+    <div class="demo-grid">
+      <div class="demo-card">
+        <h4>NETWORK &nbsp;·&nbsp; node size &prop; removal cost (degree-cost)</h4>
+        <svg id="net" class="demo-svg" viewBox="0 0 520 380" role="img" aria-label="Interactive dismantling network"></svg>
+        <div class="legend">
+          <span><i style="background:#334155"></i>hub / core (in GCC)</span>
+          <span><i style="background:#94a3b8"></i>periphery leaf</span>
+          <span><i style="background:#b5121b"></i>fragment (outside GCC)</span>
+          <span><i style="background:#e2e8f0;border:1px solid #cbd5e1"></i>removed</span>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <h4>METRIC RESPONSE &nbsp;·&nbsp; x = cumulative cost, y = connectivity</h4>
+        <svg id="chart" class="chart-svg" viewBox="0 0 520 300" role="img" aria-label="ANC vs RGCC curves"></svg>
+        <div class="legend">
+          <span><i class="ln" style="border-top:2px dashed #0b6bcb"></i>ANC&nbsp;(&sigma;/N)</span>
+          <span><i class="ln" style="border-top:3px solid #b5121b"></i>RGCC&nbsp;(&sigma;/N<sub>left</sub>)</span>
+          <span><i class="ln" style="border-top:2px solid #cbd5e1"></i>previous runs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rdgrid">
+      <div class="rd"><div class="v" id="rd-removed">0</div><div class="k">nodes removed</div></div>
+      <div class="rd"><div class="v" id="rd-frag">1</div><div class="k">fragments</div></div>
+      <div class="rd anc"><div class="v" id="rd-anc">1.00</div><div class="k">ANC&nbsp;y = &sigma;/N</div></div>
+      <div class="rd rgcc"><div class="v" id="rd-rgcc">1.00</div><div class="k">RGCC&nbsp;y = &sigma;/N<sub>left</sub></div></div>
+    </div>
+
+    <div class="ctrls">
+      <button class="dbtn active" id="s-mincost" data-strat="mincost">MinCost / FINDER-like</button>
+      <button class="dbtn" id="s-hda" data-strat="hda">HDA (degree)</button>
+      <button class="dbtn" id="s-rend" data-strat="rend">REND / Boundary-Cut</button>
+      <span class="sep"></span>
+      <button class="dbtn play" id="btn-play">&#9654; Play</button>
+      <button class="dbtn" id="btn-step">Step &#8250;</button>
+      <button class="dbtn" id="btn-reset">Reset</button>
+      <button class="dbtn" id="btn-manual">&#9995; Manual explore: off</button>
+    </div>
+    <p class="hint" id="hint">Pick a strategy and press <b>Play</b>. Or turn on <b>Manual explore</b> and click any node.</p>
+
+    <div class="explain" id="explain">
+      <b>Manual mode:</b> click a node to remove it and see which of the three RGCC properties it illustrates.
+    </div>
+
+    <table class="scoretab" id="scoretab">
+      <thead><tr><th class="m">Strategy</th><th>R&#8320;&#8320;&#8320;&#8320; (ANC)</th><th>R (RGCC)</th><th>nodes to break</th></tr></thead>
+      <tbody>
+        <tr id="row-mincost"><td class="m">MinCost / FINDER-like</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-hda"><td class="m">HDA (degree)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-rend"><td class="m">REND / Boundary-Cut</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">
+      Lower <b>R (RGCC)</b> is better. &ldquo;nodes to break&rdquo; = removals needed to first cut the network into
+      &ge;&nbsp;2 real fragments &mdash; the essence of the over-removal problem: cheap-first strategies waste dozens of
+      operations before achieving any true fragmentation.
+    </p>
   </section>
 
   <section id="rend">
@@ -335,6 +450,358 @@
   </section>
 
 </main>
+
+<script>
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+
+  /* ---------- build the toy network ---------- */
+  var nodes = {};   // id -> {id,x,y,type,cost,deg}
+  var edges = [];   // [a,b]
+  var adj = {};     // id -> [ids]
+  function addNode(id,x,y,type){ nodes[id]={id:id,x:x,y:y,type:type,cost:0,deg:0}; adj[id]=[]; }
+  function addEdge(a,b){ edges.push([a,b]); adj[a].push(b); adj[b].push(a); }
+
+  var R_CORE=48, R_LEAF=98;
+  function deg2rad(d){ return d*Math.PI/180; }
+
+  // cluster A (left), cluster B (right)
+  function buildCluster(pre, cx){
+    var cy=190;
+    addNode(pre+"_H", cx, cy, "hub");
+    // cores: order depends on side; angles: right,up,left,down
+    var coreAng = (pre==="A") ? [0,-90,180,90] : [180,-90,0,90];
+    var cores=[];
+    for(var i=0;i<4;i++){
+      var id=pre+"_c"+(i+1);
+      var a=deg2rad(coreAng[i]);
+      addNode(id, cx+R_CORE*Math.cos(a), cy+R_CORE*Math.sin(a), "core");
+      cores.push(id);
+    }
+    // hub-core spokes
+    for(var j=0;j<4;j++) addEdge(pre+"_H", cores[j]);
+    // ring
+    addEdge(cores[0],cores[1]); addEdge(cores[1],cores[2]); addEdge(cores[2],cores[3]); addEdge(cores[3],cores[0]);
+    // leaves
+    var start = (pre==="A") ? 110 : -70;
+    for(var k=0;k<8;k++){
+      var id2=pre+"_l"+k;
+      var ang=deg2rad(start+20*k);
+      addNode(id2, cx+R_LEAF*Math.cos(ang), cy+R_LEAF*Math.sin(ang), "leaf");
+      addEdge(pre+"_H", id2);
+    }
+    return cores;
+  }
+  var coresA = buildCluster("A",135);
+  var coresB = buildCluster("B",385);
+  addNode("BR",260,190,"bridge");
+  addEdge("A_c1","BR");   // A_c1 is the right core of A (angle 0)
+  addEdge("BR","B_c1");   // B_c1 is the left core of B (angle 180)
+
+  // degree & cost (degree-cost)
+  var ids = Object.keys(nodes);
+  ids.forEach(function(id){ nodes[id].deg = adj[id].length; nodes[id].cost = adj[id].length; });
+  var N = ids.length;
+  var totalCost = ids.reduce(function(s,id){ return s+nodes[id].cost; },0);
+  var idx = {}; ids.forEach(function(id,i){ idx[id]=i; });
+
+  /* ---------- strategy orders (full permutations) ---------- */
+  function byCost(dir){
+    return ids.slice().sort(function(a,b){
+      return dir*(nodes[a].cost-nodes[b].cost) || (idx[a]-idx[b]);
+    });
+  }
+  var ORDERS = {
+    mincost: byCost(+1),                 // cheapest first (leaves -> bridge -> cores -> hubs)
+    hda:     byCost(-1),                 // highest degree first
+    rend:    ["BR","A_H","B_H","A_c1","A_c2","A_c3","A_c4","B_c1","B_c2","B_c3","B_c4",
+              "A_l0","A_l1","A_l2","A_l3","A_l4","A_l5","A_l6","A_l7",
+              "B_l0","B_l1","B_l2","B_l3","B_l4","B_l5","B_l6","B_l7"]
+  };
+
+  /* ---------- connectivity ---------- */
+  function analyze(removedSet){
+    var seen={}, comps=[];
+    ids.forEach(function(id){
+      if(removedSet[id]||seen[id]) return;
+      var stack=[id], comp=[]; seen[id]=1;
+      while(stack.length){
+        var u=stack.pop(); comp.push(u);
+        adj[u].forEach(function(v){ if(!removedSet[v]&&!seen[v]){ seen[v]=1; stack.push(v);} });
+      }
+      comps.push(comp);
+    });
+    var gcc=[], best=-1;
+    comps.forEach(function(c){ if(c.length>best){ best=c.length; gcc=c; } });
+    var gccSet={}; gcc.forEach(function(id){ gccSet[id]=1; });
+    return { sigma: best<0?0:best, frag: comps.length, gccSet: gccSet };
+  }
+
+  // series of states for order[0..N]
+  function computeSeries(order){
+    var removed={}, cum=0, out=[];
+    var a0=analyze(removed);
+    out.push({ r:0, cum:0, sigma:N, nleft:N, anc:1, rgcc:1, frag:1 });
+    for(var r=0;r<order.length;r++){
+      var id=order[r]; removed[id]=1; cum+=nodes[id].cost;
+      var a=analyze(removed);
+      var nleft=N-(r+1);
+      out.push({
+        r:r+1, cum:cum/totalCost, sigma:a.sigma, nleft:nleft,
+        anc: a.sigma/N,
+        rgcc: nleft>0 ? a.sigma/nleft : 1,
+        frag: a.frag
+      });
+    }
+    return out;
+  }
+  function scoreOf(series){
+    // R = sum_{r>=1} y_r * (cost(order[r-1])/total); reuse cum deltas
+    var anc=0, rgcc=0;
+    for(var r=1;r<series.length;r++){
+      var c = series[r].cum - series[r-1].cum;   // normalized cost of this removal
+      anc  += series[r].anc  * c;
+      rgcc += series[r].rgcc * c;
+    }
+    return { anc:anc, rgcc:rgcc };
+  }
+  function breakStep(series){
+    for(var r=1;r<series.length;r++){ if(series[r].frag>=2) return r; }
+    return series.length-1;
+  }
+
+  /* ---------- SVG setup ---------- */
+  var net = document.getElementById("net");
+  var elEdges={}, elNodes={};
+  edges.forEach(function(e,i){
+    var l=document.createElementNS(NS,"line");
+    l.setAttribute("x1",nodes[e[0]].x); l.setAttribute("y1",nodes[e[0]].y);
+    l.setAttribute("x2",nodes[e[1]].x); l.setAttribute("y2",nodes[e[1]].y);
+    l.setAttribute("class","edge"); net.appendChild(l); elEdges[i]=l;
+  });
+  ids.forEach(function(id){
+    var n=nodes[id];
+    var c=document.createElementNS(NS,"circle");
+    c.setAttribute("cx",n.x); c.setAttribute("cy",n.y);
+    c.setAttribute("r",5+1.7*Math.sqrt(n.cost));
+    c.setAttribute("class","node"); c.setAttribute("data-id",id);
+    c.addEventListener("click",function(){ onNodeClick(id); });
+    net.appendChild(c); elNodes[id]=c;
+  });
+
+  var chart=document.getElementById("chart");
+  var CW=520, CH=300, ML=44, MR=12, MT=14, MB=34;
+  var PW=CW-ML-MR, PH=CH-MT-MB;
+  function px(x){ return ML + x*PW; }
+  function py(y){ return MT + (1-y)*PH; }
+  function drawAxes(){
+    while(chart.firstChild) chart.removeChild(chart.firstChild);
+    [0,.25,.5,.75,1].forEach(function(g){
+      var ln=document.createElementNS(NS,"line");
+      ln.setAttribute("x1",px(0)); ln.setAttribute("x2",px(1));
+      ln.setAttribute("y1",py(g)); ln.setAttribute("y2",py(g));
+      ln.setAttribute("stroke","#eef1f4"); ln.setAttribute("stroke-width",1); chart.appendChild(ln);
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",ML-6); t.setAttribute("y",py(g)+3); t.setAttribute("text-anchor","end");
+      t.setAttribute("font-size","10"); t.setAttribute("fill","#8a929c"); t.textContent=g.toFixed(2); chart.appendChild(t);
+    });
+    [0,.5,1].forEach(function(g){
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",px(g)); t.setAttribute("y",CH-12); t.setAttribute("text-anchor","middle");
+      t.setAttribute("font-size","10"); t.setAttribute("fill","#8a929c");
+      t.textContent=(g*100).toFixed(0)+"%"; chart.appendChild(t);
+    });
+    var xl=document.createElementNS(NS,"text");
+    xl.setAttribute("x",px(.5)); xl.setAttribute("y",CH-1); xl.setAttribute("text-anchor","middle");
+    xl.setAttribute("font-size","10.5"); xl.setAttribute("fill","#5b6470"); xl.textContent="cumulative removal cost"; chart.appendChild(xl);
+  }
+  function path(series, upto, key, stroke, width, dash, opacity){
+    if(upto<0) return;
+    var d="";
+    for(var r=0;r<=upto;r++){ d += (r===0?"M":"L")+px(series[r].cum).toFixed(1)+" "+py(series[r][key]).toFixed(1)+" "; }
+    var p=document.createElementNS(NS,"path");
+    p.setAttribute("d",d); p.setAttribute("fill","none"); p.setAttribute("stroke",stroke);
+    p.setAttribute("stroke-width",width); if(dash) p.setAttribute("stroke-dasharray",dash);
+    p.setAttribute("stroke-linejoin","round"); p.setAttribute("stroke-linecap","round");
+    if(opacity!=null) p.setAttribute("opacity",opacity);
+    chart.appendChild(p);
+  }
+
+  /* ---------- state ---------- */
+  var strat="mincost";
+  var series=computeSeries(ORDERS[strat]);
+  var step=0;                 // number removed
+  var manual=false;
+  var manualOrder=[], manualSeries=[series[0]];
+  var timer=null;
+  var ghosts={};              // strat -> series (completed) for faint overlay
+
+  function activeSeries(){ return manual?manualSeries:series; }
+  function removedPrefix(){
+    var set={};
+    if(manual){ manualOrder.slice(0,step).forEach(function(id){ set[id]=1; }); }
+    else { ORDERS[strat].slice(0,step).forEach(function(id){ set[id]=1; }); }
+    return set;
+  }
+
+  function render(){
+    var removed=removedPrefix();
+    var a=analyze(removed);
+    // nodes
+    ids.forEach(function(id){
+      var c=elNodes[id];
+      if(removed[id]){ c.setAttribute("class","node removed"); c.setAttribute("fill","#e2e8f0"); return; }
+      var inGcc=a.gccSet[id];
+      var t=nodes[id].type;
+      var fill = inGcc ? (t==="leaf"?"#94a3b8":"#334155") : "#b5121b";
+      c.setAttribute("class","node"); c.setAttribute("fill",fill);
+    });
+    // edges
+    edges.forEach(function(e,i){ elEdges[i].setAttribute("class", (removed[e[0]]||removed[e[1]])?"edge gone":"edge"); });
+    // readouts
+    var s=activeSeries()[step];
+    document.getElementById("rd-removed").textContent = step;
+    document.getElementById("rd-frag").textContent = s.frag;
+    document.getElementById("rd-anc").textContent = s.anc.toFixed(2);
+    document.getElementById("rd-rgcc").textContent = s.rgcc.toFixed(2);
+    // chart
+    drawAxes();
+    Object.keys(ghosts).forEach(function(k){
+      if(!manual && k===strat) return;
+      path(ghosts[k], ghosts[k].length-1, "rgcc", "#cbd5e1", 2, null, .9);
+    });
+    var ser=activeSeries();
+    path(ser, step, "anc",  "#0b6bcb", 2, "5 4", 1);
+    path(ser, step, "rgcc", "#b5121b", 3, null, 1);
+  }
+
+  /* ---------- explanations (manual) ---------- */
+  function explain(id, before, after){
+    var box=document.getElementById("explain");
+    var inGcc = before.gccSet[id];
+    var nleftBefore = N - (step-1);
+    var sigB=before.sigma, sigA=after.sigma;
+    var rgccB = nleftBefore>0? sigB/nleftBefore : 1;
+    var rgccA = (nleftBefore-1)>0? sigA/(nleftBefore-1) : 1;
+    var delta = sigB - sigA;
+    var cls, html;
+    if(!inGcc){
+      cls="up";
+      html="<b>Property&nbsp;1 &mdash; ineffective removal penalized.</b> This node was <b>outside</b> the giant component, "+
+           "so &sigma;<sub>gcc</sub> stays "+sigA+" while N<sub>left</sub> drops "+nleftBefore+"&rarr;"+(nleftBefore-1)+". "+
+           "RGCC <b>rises</b> "+rgccB.toFixed(3)+"&rarr;"+rgccA.toFixed(3)+" &mdash; the metric punishes wasted operations "+
+           "(ANC would ignore this).";
+    } else if(rgccA < rgccB - 1e-9){
+      cls="down";
+      html="<b>Property&nbsp;2 &mdash; genuine fragmentation.</b> Removing it split <b>&Delta;="+delta+"</b> node(s) off the GCC "+
+           "("+"&Delta; &gt; &sigma;/N<sub>left</sub> = "+rgccB.toFixed(2)+"), so RGCC <b>drops sharply</b> "+
+           rgccB.toFixed(3)+"&rarr;"+rgccA.toFixed(3)+". This is real dismantling &mdash; exactly what RGCC rewards.";
+    } else {
+      cls="flat";
+      html="<b>Property&nbsp;2/3 &mdash; mere shrinkage.</b> Only &Delta;="+delta+" node left the GCC "+
+           "(&Delta; &le; &sigma;/N<sub>left</sub> = "+rgccB.toFixed(2)+"), so RGCC stays flat / rises "+
+           rgccB.toFixed(3)+"&rarr;"+rgccA.toFixed(3)+". ANC happily counts it, RGCC refuses to.";
+    }
+    box.className="explain "+cls; box.innerHTML=html;
+  }
+
+  function onNodeClick(id){
+    if(!manual) return;
+    if(manualOrder.indexOf(id)>=0) return;
+    var before=analyze(removedPrefix());
+    manualOrder.push(id);
+    var removedNow={}; manualOrder.forEach(function(x){ removedNow[x]=1; });
+    var after=analyze(removedNow);
+    // extend manualSeries
+    var prev=manualSeries[manualSeries.length-1];
+    var cum=prev.cum + nodes[id].cost/totalCost;
+    var nleft=N-manualOrder.length;
+    manualSeries.push({ r:manualOrder.length, cum:cum, sigma:after.sigma, nleft:nleft,
+      anc:after.sigma/N, rgcc: nleft>0?after.sigma/nleft:1, frag:after.frag });
+    step=manualOrder.length;
+    explain(id, before, after);
+    render();
+  }
+
+  /* ---------- controls ---------- */
+  function stopTimer(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("btn-play").innerHTML="&#9654; Play"; } }
+  function setStrategy(s){
+    stopTimer();
+    strat=s; series=computeSeries(ORDERS[s]); step=0;
+    ["mincost","hda","rend"].forEach(function(k){ document.getElementById("s-"+k).classList.toggle("active",k===s); });
+    document.getElementById("hint").innerHTML = descOf(s);
+    render();
+  }
+  function descOf(s){
+    if(s==="mincost") return "<b>MinCost / FINDER-like:</b> always remove the cheapest node &mdash; watch it harvest all peripheral leaves first. ANC slides down, but RGCC stays pinned at 1.0: <b>no real fragmentation</b>.";
+    if(s==="hda") return "<b>HDA:</b> remove the highest-degree hub first. It fragments, but hubs are the most expensive nodes &mdash; costly dismantling.";
+    return "<b>REND / Boundary-Cut:</b> strike the bridge &amp; boundary nodes first. The network splits almost immediately &mdash; RGCC plunges after very few, cheap removals.";
+  }
+  function doStep(){
+    var lim = manual ? manualOrder.length : ORDERS[strat].length;
+    if(step>=lim){ stopTimer(); return; }
+    step++;
+    render();
+    if(step>=lim){ stopTimer(); onComplete(); }
+  }
+  function onComplete(){
+    if(manual) return;
+    ghosts[strat]=series;                 // store full curve for comparison
+    var sc=scoreOf(series), bk=breakStep(series);
+    var row=document.getElementById("row-"+strat);
+    row.children[1].textContent=(sc.anc*100).toFixed(1);
+    row.children[2].textContent=(sc.rgcc*100).toFixed(1);
+    row.children[3].textContent=bk;
+    highlightWinner();
+  }
+  function highlightWinner(){
+    var best=null,bestv=1e9;
+    ["mincost","hda","rend"].forEach(function(k){
+      var row=document.getElementById("row-"+k); row.classList.remove("win");
+      var v=parseFloat(row.children[2].textContent);
+      if(!isNaN(v)&&v<bestv){ bestv=v; best=k; }
+    });
+    if(best) document.getElementById("row-"+best).classList.add("win");
+  }
+  function reset(){
+    stopTimer(); step=0;
+    if(manual){ manualOrder=[]; manualSeries=[computeSeries(ORDERS[strat])[0]];
+      document.getElementById("explain").className="explain";
+      document.getElementById("explain").innerHTML="<b>Manual mode:</b> click a node to remove it and see which of the three RGCC properties it illustrates.";
+    }
+    render();
+  }
+  function toggleManual(){
+    manual=!manual; stopTimer(); step=0;
+    document.getElementById("btn-manual").innerHTML = "&#9995; Manual explore: "+(manual?"on":"off");
+    ["s-mincost","s-hda","s-rend","btn-play","btn-step"].forEach(function(bid){ document.getElementById(bid).disabled=manual; });
+    if(manual){ manualOrder=[]; manualSeries=[computeSeries(ORDERS[strat])[0]];
+      document.getElementById("hint").innerHTML="<b>Manual explore:</b> click nodes. Try a peripheral leaf (RGCC flat), then the central bridge (RGCC plunge), then a node in a small red fragment (RGCC rises).";
+      document.getElementById("explain").className="explain";
+      document.getElementById("explain").innerHTML="<b>Manual mode:</b> click a node to remove it and see which of the three RGCC properties it illustrates.";
+    } else { document.getElementById("hint").innerHTML=descOf(strat); }
+    render();
+  }
+
+  document.getElementById("s-mincost").addEventListener("click",function(){ setStrategy("mincost"); });
+  document.getElementById("s-hda").addEventListener("click",function(){ setStrategy("hda"); });
+  document.getElementById("s-rend").addEventListener("click",function(){ setStrategy("rend"); });
+  document.getElementById("btn-step").addEventListener("click",doStep);
+  document.getElementById("btn-reset").addEventListener("click",reset);
+  document.getElementById("btn-manual").addEventListener("click",toggleManual);
+  document.getElementById("btn-play").addEventListener("click",function(){
+    if(manual) return;
+    if(timer){ stopTimer(); return; }
+    if(step>=ORDERS[strat].length) step=0;
+    document.getElementById("btn-play").innerHTML="&#10073;&#10073; Pause";
+    timer=setInterval(doStep,430);
+  });
+
+  drawAxes();
+  setStrategy("mincost");
+})();
+</script>
 
 <footer>
   <div class="wrap">
