@@ -98,8 +98,12 @@
   svg.demo-svg circle.node{stroke:#ffffff;stroke-width:1.4;cursor:pointer;transition:opacity .25s,fill .3s,r .2s}
   svg.demo-svg circle.node.removed{opacity:.1;pointer-events:none}
   svg.chart-svg{width:100%;height:auto;display:block}
-  #propanim{width:100%;height:auto;display:block;background:#fcfdff;border-radius:8px}
-  #propanim text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+  .propgrid{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+  .proprow{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:center;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px 16px}
+  .propmini{width:300px;height:150px;background:#fcfdff;border-radius:8px;flex:none}
+  .propmini text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+  .proptext b{display:block;color:#0f172a;font-size:15.5px;margin-bottom:4px}
+  .proptext span{font-size:14px;color:#475569;line-height:1.55}
   .ctrls{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px}
   .ctrls .sep{flex-basis:100%;height:0}
   .dbtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;color:var(--fg);line-height:1.2}
@@ -136,6 +140,8 @@
     .demo-grid{grid-template-columns:1fr}
     .demo-grid2{grid-template-columns:1fr}
     .rdgrid{grid-template-columns:repeat(2,1fr)}
+    .proprow{grid-template-columns:1fr}
+    .propmini{width:100%}
     body{font-size:16px}
   }
 </style>
@@ -243,20 +249,29 @@
       \[ \Rrgcc(v_1,\dots,v_N)=\sum_{k=1}^{N}\frac{\sgcc(\mathcal G_k)}{N-k}\,c(v_k) \]
     </div>
 
-    <p style="margin-top:22px"><b>Why this simple change works</b> — three effects, shown live below:</p>
-    <div class="demo-card" style="padding:8px 12px 4px">
-      <svg id="propanim" class="demo-svg" viewBox="0 0 720 260" role="img"
-           aria-label="Animation of the three RGCC properties"></svg>
-    </div>
-    <div class="callout" style="margin-top:12px">
-      <p style="margin:.2em 0">
-        <b>(i) Penalizes ineffective removals</b> — removing a node outside the GCC shrinks \(\Nleft\)
-        while \(\sgcc\) stays put, so RGCC <em>rises</em>.
-        <b>(ii) Distinguishes fragmentation from shrinkage</b> — a single leaf removal leaves RGCC unchanged, while
-        a removal that disconnects many nodes drops it sharply.
-        <b>(iii) Encodes a cost–scale trade-off</b> — every removal shrinks the denominator, raising the bar for all
-        future actions.
-      </p>
+    <p style="margin-top:22px"><b>Why this simple change works</b> — three effects, each shown live:</p>
+    <div class="propgrid">
+      <div class="proprow">
+        <svg class="propmini" id="pa0" viewBox="0 0 300 150" role="img" aria-label="Property i animation"></svg>
+        <div class="proptext">
+          <b>(i) Penalizes ineffective removals</b>
+          <span>removing a node outside the GCC shrinks \(\Nleft\) while \(\sgcc\) stays put, so RGCC <em>rises</em>.</span>
+        </div>
+      </div>
+      <div class="proprow">
+        <svg class="propmini" id="pa1" viewBox="0 0 300 150" role="img" aria-label="Property ii animation"></svg>
+        <div class="proptext">
+          <b>(ii) Distinguishes fragmentation from shrinkage</b>
+          <span>a single leaf removal leaves RGCC unchanged, while a removal that disconnects many nodes drops it sharply.</span>
+        </div>
+      </div>
+      <div class="proprow">
+        <svg class="propmini" id="pa2" viewBox="0 0 300 150" role="img" aria-label="Property iii animation"></svg>
+        <div class="proptext">
+          <b>(iii) Encodes a cost–scale trade-off</b>
+          <span>every removal shrinks the denominator \(\Nleft\), raising the bar for all future actions.</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -932,28 +947,20 @@
   loadNetwork("toy");
 })();
 
-/* ---------- §3: auto-playing animation of the three RGCC properties ---------- */
+/* ---------- §3: three side-by-side auto-playing mini-animations ---------- */
 (function(){
   var NS="http://www.w3.org/2000/svg";
-  var pa=document.getElementById("propanim");
-  if(!pa) return;
-  function mk(tag,attrs){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
-  function txt(x,y,s,attrs){ var t=mk("text",attrs||{}); t.setAttribute("x",x); t.setAttribute("y",y); t.textContent=s; pa.appendChild(t); return t; }
+  function mk(svg,tag,attrs){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); svg.appendChild(e); return e; }
+  function txt(svg,x,y,s,attrs){ var t=mk(svg,"text",attrs||{}); t.setAttribute("x",x); t.setAttribute("y",y); t.textContent=s; return t; }
 
   var SC=[
-    { cap:"(i) Ineffective removal \u2192 RGCC rises  (penalized)",
-      sub:"delete a node OUTSIDE the giant component: \u03c3_gcc unchanged, N_left \u2193  \u21d2  RGCC goes UP",
-      nodes:[{x:140,y:120},{x:100,y:168},{x:145,y:205},{x:190,y:180},{x:188,y:128},{x:300,y:150,red:1},{x:346,y:182,red:1}],
+    { nodes:[{x:65,y:38},{x:32,y:68},{x:60,y:108},{x:100,y:88},{x:98,y:44},{x:150,y:52,red:1},{x:182,y:86,red:1}],
       edges:[[0,1],[1,2],[2,3],[3,4],[4,0],[0,3],[5,6]], target:5, dir:"up" },
-    { cap:"(ii) Genuine fragmentation \u2192 RGCC drops sharply",
-      sub:"delete a CONNECTOR: the graph splits, \u03c3_gcc collapses  \u21d2  RGCC goes DOWN (a leaf would barely move it)",
-      nodes:[{x:78,y:120},{x:78,y:205},{x:140,y:162},{x:205,y:162},{x:270,y:162},{x:332,y:120},{x:332,y:205}],
+    { nodes:[{x:28,y:42},{x:28,y:108},{x:70,y:75},{x:105,y:75},{x:140,y:75},{x:178,y:42},{x:178,y:108}],
       edges:[[0,1],[1,2],[2,0],[2,3],[3,4],[4,5],[5,6],[6,4]], target:3, dir:"down" },
-    { cap:"(iii) Cost\u2013scale trade-off \u2192 the bar keeps rising",
-      sub:"every removal shrinks N_left, so future actions must break a LARGER share of the GCC to keep helping",
-      dir:"up" }
+    { ring:1, dir:"up" }
   ];
-  (function(){ var arr=[],cx=175,cy=158,r=80; for(var i=0;i<10;i++){ var a=(-90+i*36)*Math.PI/180; arr.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}); } var e=[]; for(var j=0;j<10;j++) e.push([j,(j+1)%10]); SC[2].nodes=arr; SC[2].edges=e; })();
+  (function(){ var arr=[],cx=100,cy=78,r=52; for(var i=0;i<10;i++){ var a=(-90+i*36)*Math.PI/180; arr.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}); } var e=[]; for(var j=0;j<10;j++) e.push([j,(j+1)%10]); SC[2].nodes=arr; SC[2].edges=e; })();
 
   function bfs(sc,removed){
     var nn=sc.nodes.length, adj=[]; for(var i=0;i<nn;i++) adj.push([]);
@@ -966,58 +973,51 @@
     return { sigma:best, nleft:nn-rc };
   }
 
-  var TL=[];
-  function push(n,st){ for(var i=0;i<n;i++) TL.push(st); }
-  push(2,{s:0,rm:{}});           push(4,{s:0,rm:{5:1},act:1});
-  push(2,{s:1,rm:{}});           push(4,{s:1,rm:{3:1},act:1});
-  for(var k=0;k<=5;k++) push(k===5?3:1,{s:2,k:k});
+  function frames(sc){
+    var f=[];
+    if(sc.ring){ for(var k=0;k<=5;k++){ var reps=(k===5)?3:1; for(var r=0;r<reps;r++) f.push({k:k}); } }
+    else { f.push({}); f.push({}); var t={}; t[sc.target]=1; f.push({rm:t,act:1}); f.push({rm:t,act:1}); f.push({rm:t,act:1}); }
+    return f;
+  }
 
-  function drawGauge(state,sc,removed){
-    var gx=648, gy0=66, gh=164, gy1=gy0+gh;
-    pa.appendChild(mk("rect",{x:gx,y:gy0,width:32,height:gh,rx:5,fill:"#f1f5f9",stroke:"#e2e8f0"}));
-    var val,lbl,col,s1,s2,s3,arrow;
-    if(state.s===2){
-      var nleft=10-(state.k||0), bar=1/nleft;
-      val=Math.min(1,bar*3.2); col="#b45309"; lbl="bar";
-      s1="removed = "+(state.k||0); s2="N_left = "+nleft; s3="bar = 1/N_left = "+bar.toFixed(2); arrow="\u25b2 rises";
+  function draw(svg,sc,fr){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var removed=fr.rm||{}; if(sc.ring){ removed={}; for(var q=0;q<(fr.k||0);q++) removed[q]=1; }
+    sc.edges.forEach(function(e){
+      var g=removed[e[0]]||removed[e[1]];
+      mk(svg,"line",{x1:sc.nodes[e[0]].x,y1:sc.nodes[e[0]].y,x2:sc.nodes[e[1]].x,y2:sc.nodes[e[1]].y,stroke:g?"#eef1f4":"#c9d0da","stroke-width":1.8});
+    });
+    sc.nodes.forEach(function(n,i){
+      var rm=removed[i], c=mk(svg,"circle",{cx:n.x,cy:n.y,r:(sc.ring?6:9),fill:rm?"#e2e8f0":(n.red?"#b5121b":"#334155"),stroke:"#fff","stroke-width":1.6});
+      if(rm) c.setAttribute("opacity","0.28");
+    });
+    // compact readout + gauge on the right
+    var gx=282, gy0=22, gh=104, gy1=gy0+gh, col, s1, s2, s3, arrow, val;
+    if(sc.ring){
+      var nleft=10-(fr.k||0), bar=1/nleft;
+      col="#b45309"; val=Math.min(1,bar*3.2);
+      s1="removed = "+(fr.k||0); s2="N_left = "+nleft; s3="bar = 1/N_left"; arrow="\u25b2 rises";
     } else {
       var a=bfs(sc,removed), rgcc=a.nleft>0?a.sigma/a.nleft:1;
-      val=Math.max(0,Math.min(1,rgcc)); col=(sc.dir==="down")?"#1a8f3c":"#b5121b"; lbl="RGCC";
+      col=(sc.dir==="down")?"#1a8f3c":"#b5121b"; val=Math.max(0,Math.min(1,rgcc));
       s1="\u03c3_gcc = "+a.sigma; s2="N_left = "+a.nleft; s3="RGCC = "+rgcc.toFixed(3);
       arrow=(sc.dir==="down")?"\u25bc drops":"\u25b2 rises";
     }
-    var fh=val*gh;
-    pa.appendChild(mk("rect",{x:gx,y:gy1-fh,width:32,height:fh,rx:5,fill:col,opacity:0.85}));
-    txt(gx+16,gy0-9,lbl,{ "text-anchor":"middle","font-size":"12","font-weight":"700","fill":col });
-    txt(470,112,s1,{ "font-size":"14.5","font-weight":"700","fill":"#0f172a" });
-    txt(470,144,s2,{ "font-size":"14.5","font-weight":"700","fill":"#0f172a" });
-    txt(470,176,s3,{ "font-size":"16","font-weight":"800","fill":col });
-    if(state.act || state.s===2) txt(470,206,arrow,{ "font-size":"15","font-weight":"800","fill":col });
+    mk(svg,"rect",{x:gx,y:gy0,width:12,height:gh,rx:3,fill:"#f1f5f9",stroke:"#e2e8f0"});
+    mk(svg,"rect",{x:gx,y:gy1-val*gh,width:12,height:val*gh,rx:3,fill:col,opacity:0.85});
+    txt(svg,272,42,s1,{ "text-anchor":"end","font-size":"11.5","font-weight":"700","fill":"#0f172a" });
+    txt(svg,272,64,s2,{ "text-anchor":"end","font-size":"11.5","font-weight":"700","fill":"#0f172a" });
+    txt(svg,272,86,s3,{ "text-anchor":"end","font-size":"12.5","font-weight":"800","fill":col });
+    if(fr.act || sc.ring) txt(svg,272,108,arrow,{ "text-anchor":"end","font-size":"12.5","font-weight":"800","fill":col });
   }
 
-  function drawScene(state){
-    while(pa.firstChild) pa.removeChild(pa.firstChild);
-    var sc=SC[state.s];
-    txt(350,26,sc.cap,{ "text-anchor":"middle","font-size":"17","font-weight":"800","fill":"#0f172a" });
-    txt(350,46,sc.sub,{ "text-anchor":"middle","font-size":"11.5","fill":"#64748b" });
-    for(var d=0;d<3;d++) pa.appendChild(mk("circle",{cx:322+d*20,cy:250,r:4.5,fill:d===state.s?"#b5121b":"#cbd5e1"}));
-    var removed=state.rm||{}; if(state.s===2){ removed={}; for(var q=0;q<(state.k||0);q++) removed[q]=1; }
-    sc.edges.forEach(function(e){
-      var g=removed[e[0]]||removed[e[1]];
-      pa.appendChild(mk("line",{x1:sc.nodes[e[0]].x,y1:sc.nodes[e[0]].y,x2:sc.nodes[e[1]].x,y2:sc.nodes[e[1]].y,stroke:g?"#eef1f4":"#c9d0da","stroke-width":2}));
-    });
-    sc.nodes.forEach(function(n,i){
-      var rm=removed[i], fill=rm?"#e2e8f0":(n.red?"#b5121b":"#334155");
-      var c=mk("circle",{cx:n.x,cy:n.y,r:(state.s===2?9:13),fill:fill,stroke:"#fff","stroke-width":2});
-      if(rm) c.setAttribute("opacity","0.28");
-      pa.appendChild(c);
-    });
-    drawGauge(state,sc,removed);
+  function makeMini(id,sc){
+    var svg=document.getElementById(id); if(!svg) return;
+    var fs=frames(sc), i=0;
+    function tick(){ draw(svg,sc,fs[i%fs.length]); i++; }
+    tick(); setInterval(tick,900);
   }
-
-  var fi=0;
-  function tick(){ drawScene(TL[fi%TL.length]); fi++; }
-  tick(); setInterval(tick,850);
+  makeMini("pa0",SC[0]); makeMini("pa1",SC[1]); makeMini("pa2",SC[2]);
 })();
 </script>
 
