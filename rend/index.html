@@ -73,6 +73,9 @@
   svg.demo-svg{width:100%;height:auto;display:block;background:#fcfdff;border-radius:8px;touch-action:manipulation}
   svg.demo-svg line.edge{stroke:#c9d0da;stroke-width:1.4;transition:stroke .25s}
   svg.demo-svg line.edge.gone{stroke:#eef1f4}
+  svg.demo-svg.dense line.edge{stroke-width:.5}
+  svg.demo-svg.dense line.edge.gone{stroke:#f2f5f8}
+  svg.demo-svg.dense circle.node{stroke-width:.6}
   svg.demo-svg circle.node{stroke:#ffffff;stroke-width:1.4;cursor:pointer;transition:opacity .25s,fill .3s,r .2s}
   svg.demo-svg circle.node.removed{opacity:.1;pointer-events:none}
   svg.chart-svg{width:100%;height:auto;display:block}
@@ -235,15 +238,22 @@
   <section id="demo" class="demo">
     <h2><span class="num">&#9654;</span>See it for yourself<span class="badge2">Interactive</span></h2>
     <p class="lead">
-      Watch dismantling happen node-by-node on a small toy network and see the two metrics react in real time.
+      Watch dismantling happen step-by-step &mdash; on a tiny demo network or the real 829-node crime network &mdash;
+      and see the two metrics react in real time.
       The <b>ANC</b> curve (dashed, GCC&nbsp;/&nbsp;<i>N</i>) rewards <em>any</em> shrinkage; the <b>RGCC</b> curve
       (solid, GCC&nbsp;/&nbsp;<i>N</i><sub>left</sub>) only drops for <em>genuine fragmentation</em>. Try a strategy,
       or switch to <b>manual mode</b> and click nodes to feel the three properties of RGCC directly.
     </p>
 
+    <div class="ctrls" style="margin-top:2px">
+      <span style="font-size:13px;color:var(--muted);align-self:center;margin-right:2px">Network:</span>
+      <button class="dbtn active" id="n-toy">Demo &middot; 27 nodes</button>
+      <button class="dbtn" id="n-crime">Crime &middot; real, 829 nodes</button>
+    </div>
+
     <div class="demo-grid">
       <div class="demo-card">
-        <h4>NETWORK &nbsp;·&nbsp; node size &prop; removal cost (degree-cost)</h4>
+        <h4 id="net-title">DEMO NETWORK &nbsp;·&nbsp; node size &prop; removal cost (degree-cost)</h4>
         <svg id="net" class="demo-svg" viewBox="0 0 520 380" role="img" aria-label="Interactive dismantling network"></svg>
         <div class="legend">
           <span><i style="background:#334155"></i>hub / core (in GCC)</span>
@@ -301,8 +311,9 @@
       Lower <b>R (RGCC)</b> is better. &ldquo;nodes to break&rdquo; = removals needed to first cut the network into
       &ge;&nbsp;2 real fragments &mdash; the essence of the over-removal problem: cheap-first strategies waste dozens of
       operations before achieving any true fragmentation. <b>MinCost</b>, <b>HDA</b> and <b>Boundary-Cut</b> are
-      computed live in your browser; <b>REND</b>'s sequence is the true output of the trained model, run offline on this
-      exact network. Notice that Boundary-Cut reproduces REND almost node-for-node.
+      deterministic algorithms; <b>REND</b> is the trained deep-RL model. On the demo network the three heuristics run
+      live in your browser; on the crime network all sequences &mdash; including REND's &mdash; are the real results
+      computed offline. On both, Boundary-Cut closely tracks REND, and MinCost falls into the over-removal trap.
     </p>
   </section>
 
@@ -455,60 +466,16 @@
 
 </main>
 
+<script src="crime.js"></script>
 <script>
 (function(){
   "use strict";
   var NS = "http://www.w3.org/2000/svg";
 
-  /* ---------- build the toy network ---------- */
-  var nodes = {};   // id -> {id,x,y,type,cost,deg}
-  var edges = [];   // [a,b]
-  var adj = {};     // id -> [ids]
-  function addNode(id,x,y,type){ nodes[id]={id:id,x:x,y:y,type:type,cost:0,deg:0}; adj[id]=[]; }
-  function addEdge(a,b){ edges.push([a,b]); adj[a].push(b); adj[b].push(a); }
-
-  var R_CORE=48, R_LEAF=98;
-  function deg2rad(d){ return d*Math.PI/180; }
-
-  // cluster A (left), cluster B (right)
-  function buildCluster(pre, cx){
-    var cy=190;
-    addNode(pre+"_H", cx, cy, "hub");
-    // cores: order depends on side; angles: right,up,left,down
-    var coreAng = (pre==="A") ? [0,-90,180,90] : [180,-90,0,90];
-    var cores=[];
-    for(var i=0;i<4;i++){
-      var id=pre+"_c"+(i+1);
-      var a=deg2rad(coreAng[i]);
-      addNode(id, cx+R_CORE*Math.cos(a), cy+R_CORE*Math.sin(a), "core");
-      cores.push(id);
-    }
-    // hub-core spokes
-    for(var j=0;j<4;j++) addEdge(pre+"_H", cores[j]);
-    // ring
-    addEdge(cores[0],cores[1]); addEdge(cores[1],cores[2]); addEdge(cores[2],cores[3]); addEdge(cores[3],cores[0]);
-    // leaves
-    var start = (pre==="A") ? 110 : -70;
-    for(var k=0;k<8;k++){
-      var id2=pre+"_l"+k;
-      var ang=deg2rad(start+20*k);
-      addNode(id2, cx+R_LEAF*Math.cos(ang), cy+R_LEAF*Math.sin(ang), "leaf");
-      addEdge(pre+"_H", id2);
-    }
-    return cores;
-  }
-  var coresA = buildCluster("A",135);
-  var coresB = buildCluster("B",385);
-  addNode("BR",260,190,"bridge");
-  addEdge("A_c1","BR");   // A_c1 is the right core of A (angle 0)
-  addEdge("BR","B_c1");   // B_c1 is the left core of B (angle 180)
-
-  // degree & cost (degree-cost)
-  var ids = Object.keys(nodes);
-  ids.forEach(function(id){ nodes[id].deg = adj[id].length; nodes[id].cost = adj[id].length; });
-  var N = ids.length;
-  var totalCost = ids.reduce(function(s,id){ return s+nodes[id].cost; },0);
-  var idx = {}; ids.forEach(function(id,i){ idx[id]=i; });
+  /* ---------- graph globals (populated by loadNetwork) ---------- */
+  var nodes={}, adj={}, ids=[], N=0, totalCost=0, idx={}, maxCost=1;
+  var EDGES=[], NETSTYLE={rmin:5,rspan:6,edgeW:1.4}, ORDERS={}, netKey="toy";
+  function medianOf(arr){ var a=arr.slice().sort(function(x,y){ return x-y; }); return a[Math.floor(a.length/2)]; }
 
   /* ---------- residual-graph helpers ---------- */
   function aliveList(removed){ return ids.filter(function(id){ return !removed[id]; }); }
@@ -526,7 +493,7 @@
     return core;
   }
 
-  /* ---------- genuinely-computed dismantling strategies ---------- */
+  /* ---------- genuinely-computed dismantling strategies (demo net, live) ---------- */
   function stratMinCost(){          // greedy: remove the cheapest node every step
     var rm={}, order=[];
     while(order.length<N){
@@ -562,19 +529,49 @@
     }
     return order;
   }
-  // REND: true output of the trained model, computed offline on THIS toy network
-  // (dqn.EvaluateRealData on the 27-node graph, degree-cost). It cannot run in-browser.
-  var REND_ORDER = ["A_H","B_H","A_c1","B_c1","B_c3","A_c3","A_c2","A_c4",
+  // REND on the demo net: true trained-model output (offline; the model cannot run in-browser)
+  var TOY_REND = ["A_H","B_H","A_c1","B_c1","B_c3","A_c3","A_c2","A_c4",
     "A_l0","A_l1","A_l2","A_l3","A_l4","A_l5","A_l6","A_l7","B_c2","B_c4",
     "B_l0","B_l1","B_l2","B_l3","B_l4","B_l5","B_l6","B_l7","BR"];
 
   var STRATS = ["mincost","hda","boundarycut","rend"];
-  var ORDERS = {
-    mincost: stratMinCost(),
-    hda: stratHDA(),
-    boundarycut: stratBoundaryCut(),
-    rend: REND_ORDER.slice()
-  };
+
+  /* ---------- network builders ---------- */
+  function finalizeGraph(edges, style){
+    EDGES=edges; NETSTYLE=style;
+    ids=Object.keys(nodes); N=ids.length;
+    totalCost=0; maxCost=0; idx={};
+    ids.forEach(function(id,i){ idx[id]=i; totalCost+=nodes[id].cost; if(nodes[id].cost>maxCost) maxCost=nodes[id].cost; });
+    buildSVG();
+  }
+  function buildToy(){
+    nodes={}; adj={}; var edges=[];
+    function addNode(id,x,y,type){ nodes[id]={id:id,x:x,y:y,type:type,cost:0}; adj[id]=[]; }
+    function addEdge(a,b){ edges.push([a,b]); adj[a].push(b); adj[b].push(a); }
+    var R_CORE=48, R_LEAF=98; function d2r(d){ return d*Math.PI/180; }
+    function cluster(pre,cx){
+      var cy=190; addNode(pre+"_H",cx,cy,"hub");
+      var ang=(pre==="A")?[0,-90,180,90]:[180,-90,0,90], cs=[];
+      for(var i=0;i<4;i++){ var id=pre+"_c"+(i+1), a=d2r(ang[i]); addNode(id,cx+R_CORE*Math.cos(a),cy+R_CORE*Math.sin(a),"core"); cs.push(id); }
+      for(var j=0;j<4;j++) addEdge(pre+"_H",cs[j]);
+      addEdge(cs[0],cs[1]); addEdge(cs[1],cs[2]); addEdge(cs[2],cs[3]); addEdge(cs[3],cs[0]);
+      var start=(pre==="A")?110:-70;
+      for(var k=0;k<8;k++){ var id2=pre+"_l"+k, an=d2r(start+20*k); addNode(id2,cx+R_LEAF*Math.cos(an),cy+R_LEAF*Math.sin(an),"leaf"); addEdge(pre+"_H",id2); }
+    }
+    cluster("A",135); cluster("B",385);
+    addNode("BR",260,190,"bridge"); addEdge("A_c1","BR"); addEdge("BR","B_c1");
+    Object.keys(nodes).forEach(function(id){ nodes[id].cost=adj[id].length; });
+    finalizeGraph(edges, {rmin:5,rspan:6,edgeW:1.4});
+    ORDERS={ mincost:stratMinCost(), hda:stratHDA(), boundarycut:stratBoundaryCut(), rend:TOY_REND.slice() };
+  }
+  function buildCrime(){
+    nodes={}; adj={}; var C=CRIME, med=medianOf(C.cost);
+    for(var i=0;i<C.N;i++){ nodes[String(i)]={id:String(i),x:C.pos[i][0],y:C.pos[i][1],type:(C.cost[i]<=med?"leaf":"core"),cost:C.cost[i]}; adj[String(i)]=[]; }
+    C.edges.forEach(function(e){ adj[String(e[0])].push(String(e[1])); adj[String(e[1])].push(String(e[0])); });
+    finalizeGraph(C.edges, {rmin:1.8,rspan:3.0,edgeW:0.5});
+    function S(a){ return a.map(String); }
+    ORDERS={ mincost:S(C.orders.mincost), hda:S(C.orders.hda), boundarycut:S(C.orders.boundarycut), rend:S(C.orders.rend) };
+  }
 
   /* ---------- connectivity ---------- */
   function analyze(removedSet){
@@ -627,24 +624,28 @@
     return series.length-1;
   }
 
-  /* ---------- SVG setup ---------- */
+  /* ---------- SVG build (re-run on network switch) ---------- */
   var net = document.getElementById("net");
   var elEdges={}, elNodes={};
-  edges.forEach(function(e,i){
-    var l=document.createElementNS(NS,"line");
-    l.setAttribute("x1",nodes[e[0]].x); l.setAttribute("y1",nodes[e[0]].y);
-    l.setAttribute("x2",nodes[e[1]].x); l.setAttribute("y2",nodes[e[1]].y);
-    l.setAttribute("class","edge"); net.appendChild(l); elEdges[i]=l;
-  });
-  ids.forEach(function(id){
-    var n=nodes[id];
-    var c=document.createElementNS(NS,"circle");
-    c.setAttribute("cx",n.x); c.setAttribute("cy",n.y);
-    c.setAttribute("r",5+1.7*Math.sqrt(n.cost));
-    c.setAttribute("class","node"); c.setAttribute("data-id",id);
-    c.addEventListener("click",function(){ onNodeClick(id); });
-    net.appendChild(c); elNodes[id]=c;
-  });
+  function buildSVG(){
+    while(net.firstChild) net.removeChild(net.firstChild);
+    elEdges={}; elNodes={};
+    EDGES.forEach(function(e,i){
+      var l=document.createElementNS(NS,"line");
+      l.setAttribute("x1",nodes[e[0]].x); l.setAttribute("y1",nodes[e[0]].y);
+      l.setAttribute("x2",nodes[e[1]].x); l.setAttribute("y2",nodes[e[1]].y);
+      l.setAttribute("class","edge"); net.appendChild(l); elEdges[i]=l;
+    });
+    ids.forEach(function(id){
+      var n=nodes[id];
+      var c=document.createElementNS(NS,"circle");
+      c.setAttribute("cx",n.x); c.setAttribute("cy",n.y);
+      c.setAttribute("r",(NETSTYLE.rmin+NETSTYLE.rspan*Math.sqrt(n.cost/maxCost)).toFixed(2));
+      c.setAttribute("class","node"); c.setAttribute("data-id",id);
+      (function(nid){ c.addEventListener("click",function(){ onNodeClick(nid); }); })(id);
+      net.appendChild(c); elNodes[id]=c;
+    });
+  }
 
   var chart=document.getElementById("chart");
   var CW=520, CH=300, ML=44, MR=12, MT=14, MB=34;
@@ -686,12 +687,13 @@
 
   /* ---------- state ---------- */
   var strat="mincost";
-  var series=computeSeries(ORDERS[strat]);
+  var series=null;
   var step=0;                 // number removed
   var manual=false;
-  var manualOrder=[], manualSeries=[series[0]];
+  var manualOrder=[], manualSeries=[];
   var timer=null;
   var ghosts={};              // strat -> series (completed) for faint overlay
+  var playStep=1, playInterval=430;
 
   function activeSeries(){ return manual?manualSeries:series; }
   function removedPrefix(){
@@ -714,7 +716,7 @@
       c.setAttribute("class","node"); c.setAttribute("fill",fill);
     });
     // edges
-    edges.forEach(function(e,i){ elEdges[i].setAttribute("class", (removed[e[0]]||removed[e[1]])?"edge gone":"edge"); });
+    EDGES.forEach(function(e,i){ elEdges[i].setAttribute("class", (removed[e[0]]||removed[e[1]])?"edge gone":"edge"); });
     // readouts
     var s=activeSeries()[step];
     document.getElementById("rd-removed").textContent = step;
@@ -790,15 +792,16 @@
     render();
   }
   function descOf(s){
-    if(s==="mincost") return "<b>MinCost</b> (computed live): always remove the cheapest node &mdash; it harvests all peripheral leaves first. ANC slides down, yet RGCC stays pinned at 1.0 and it takes <b>17 removals to first fragment</b> the network: the over-removal trap.";
-    if(s==="hda") return "<b>HDA</b> (computed live, adaptive): remove the current highest-degree node each step. It fragments fast &mdash; but hubs are the most expensive nodes.";
-    if(s==="boundarycut") return "<b>Boundary-Cut</b> (computed live): the paper's transparent heuristic &mdash; iteratively remove 2-core boundary nodes with the best (1-shell&nbsp;/&nbsp;cost) ratio. No training, yet it reproduces REND.";
-    return "<b>REND</b> (true trained-model output, computed offline on this network): the deep-RL agent. Its removal order is almost identical to Boundary-Cut &mdash; the black box distilled into a simple rule.";
+    if(s==="mincost") return "<b>MinCost</b>: always remove the cheapest node &mdash; it harvests peripheral (low-cost) nodes first. ANC slides down, yet RGCC barely moves and it takes <b>many removals before the network first fragments</b>: the over-removal trap.";
+    if(s==="hda") return "<b>HDA</b> (adaptive): remove the current highest-degree node each step. It fragments fast &mdash; but hubs are the most expensive nodes.";
+    if(s==="boundarycut") return "<b>Boundary-Cut</b>: the paper's transparent heuristic &mdash; iteratively remove 2-core boundary nodes with the best (1-shell&nbsp;/&nbsp;cost) ratio. No training, yet it reproduces REND.";
+    return "<b>REND</b>: the trained deep-RL agent. Its removal order closely tracks Boundary-Cut &mdash; the black box distilled into a simple rule.";
   }
   function doStep(){
-    var lim = manual ? manualOrder.length : ORDERS[strat].length;
+    if(manual) return;
+    var lim = ORDERS[strat].length;
     if(step>=lim){ stopTimer(); return; }
-    step++;
+    step = Math.min(lim, step+playStep);
     render();
     if(step>=lim){ stopTimer(); onComplete(); }
   }
@@ -832,6 +835,31 @@
     }
     render();
   }
+  function resetScoreTable(){
+    STRATS.forEach(function(k){
+      var row=document.getElementById("row-"+k); row.classList.remove("win");
+      row.children[1].textContent="\u2014"; row.children[2].textContent="\u2014"; row.children[3].textContent="\u2014";
+    });
+  }
+  function loadNetwork(key){
+    stopTimer();
+    netKey=key; manual=false;
+    if(key==="crime") buildCrime(); else buildToy();
+    net.setAttribute("class", "demo-svg"+(key==="crime"?" dense":""));
+    playStep = Math.max(1, Math.round(N/70));
+    playInterval = (key==="crime") ? 250 : 430;
+    document.getElementById("n-toy").classList.toggle("active", key==="toy");
+    document.getElementById("n-crime").classList.toggle("active", key==="crime");
+    document.getElementById("net-title").innerHTML = (key==="crime")
+      ? "CRIME NETWORK &mdash; real, 829 nodes &nbsp;&middot;&nbsp; node size &prop; degree-cost"
+      : "DEMO NETWORK &nbsp;&middot;&nbsp; node size &prop; removal cost (degree-cost)";
+    document.getElementById("btn-manual").innerHTML="&#9995; Manual explore: off";
+    ["s-mincost","s-hda","s-boundarycut","s-rend","btn-play","btn-step"].forEach(function(b){ document.getElementById(b).disabled=false; });
+    ghosts={}; resetScoreTable();
+    document.getElementById("explain").className="explain";
+    document.getElementById("explain").innerHTML="<b>Manual mode:</b> click a node to remove it and see which of the three RGCC properties it illustrates.";
+    setStrategy("mincost");
+  }
   function toggleManual(){
     manual=!manual; stopTimer(); step=0;
     document.getElementById("btn-manual").innerHTML = "&#9995; Manual explore: "+(manual?"on":"off");
@@ -856,11 +884,15 @@
     if(timer){ stopTimer(); return; }
     if(step>=ORDERS[strat].length) step=0;
     document.getElementById("btn-play").innerHTML="&#10073;&#10073; Pause";
-    timer=setInterval(doStep,430);
+    timer=setInterval(doStep,playInterval);
   });
+  document.getElementById("n-toy").addEventListener("click",function(){ loadNetwork("toy"); });
+  var crimeBtn=document.getElementById("n-crime");
+  if(typeof CRIME==="undefined"){ crimeBtn.disabled=true; crimeBtn.title="crime.js failed to load"; }
+  else { crimeBtn.addEventListener("click",function(){ loadNetwork("crime"); }); }
 
   drawAxes();
-  setStrategy("mincost");
+  loadNetwork("toy");
 })();
 </script>
 
