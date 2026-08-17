@@ -272,9 +272,10 @@
     </div>
 
     <div class="ctrls">
-      <button class="dbtn active" id="s-mincost" data-strat="mincost">MinCost / FINDER-like</button>
-      <button class="dbtn" id="s-hda" data-strat="hda">HDA (degree)</button>
-      <button class="dbtn" id="s-rend" data-strat="rend">REND / Boundary-Cut</button>
+      <button class="dbtn active" id="s-mincost">MinCost</button>
+      <button class="dbtn" id="s-hda">HDA</button>
+      <button class="dbtn" id="s-boundarycut">Boundary-Cut</button>
+      <button class="dbtn" id="s-rend">REND</button>
       <span class="sep"></span>
       <button class="dbtn play" id="btn-play">&#9654; Play</button>
       <button class="dbtn" id="btn-step">Step &#8250;</button>
@@ -290,15 +291,18 @@
     <table class="scoretab" id="scoretab">
       <thead><tr><th class="m">Strategy</th><th>R&#8320;&#8320;&#8320;&#8320; (ANC)</th><th>R (RGCC)</th><th>nodes to break</th></tr></thead>
       <tbody>
-        <tr id="row-mincost"><td class="m">MinCost / FINDER-like</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
-        <tr id="row-hda"><td class="m">HDA (degree)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
-        <tr id="row-rend"><td class="m">REND / Boundary-Cut</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-mincost"><td class="m">MinCost</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-hda"><td class="m">HDA (adaptive)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-boundarycut"><td class="m">Boundary-Cut</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        <tr id="row-rend"><td class="m">REND</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
       </tbody>
     </table>
     <p class="hint">
       Lower <b>R (RGCC)</b> is better. &ldquo;nodes to break&rdquo; = removals needed to first cut the network into
       &ge;&nbsp;2 real fragments &mdash; the essence of the over-removal problem: cheap-first strategies waste dozens of
-      operations before achieving any true fragmentation.
+      operations before achieving any true fragmentation. <b>MinCost</b>, <b>HDA</b> and <b>Boundary-Cut</b> are
+      computed live in your browser; <b>REND</b>'s sequence is the true output of the trained model, run offline on this
+      exact network. Notice that Boundary-Cut reproduces REND almost node-for-node.
     </p>
   </section>
 
@@ -506,18 +510,70 @@
   var totalCost = ids.reduce(function(s,id){ return s+nodes[id].cost; },0);
   var idx = {}; ids.forEach(function(id,i){ idx[id]=i; });
 
-  /* ---------- strategy orders (full permutations) ---------- */
-  function byCost(dir){
-    return ids.slice().sort(function(a,b){
-      return dir*(nodes[a].cost-nodes[b].cost) || (idx[a]-idx[b]);
-    });
+  /* ---------- residual-graph helpers ---------- */
+  function aliveList(removed){ return ids.filter(function(id){ return !removed[id]; }); }
+  function residualDeg(id,removed){ return adj[id].filter(function(m){ return !removed[m]; }).length; }
+  function coreNumbers(removed){                 // exact k-core (min-degree peeling)
+    var al=new Set(aliveList(removed)), deg={};
+    al.forEach(function(n){ deg[n]=adj[n].filter(function(m){ return al.has(m); }).length; });
+    var core={}, level=0;
+    while(al.size){
+      var mn=null, mv=Infinity;
+      al.forEach(function(n){ if(deg[n]<mv){ mv=deg[n]; mn=n; } });
+      level=Math.max(level,mv); core[mn]=level; al["delete"](mn);
+      adj[mn].forEach(function(m){ if(al.has(m)) deg[m]--; });
+    }
+    return core;
   }
+
+  /* ---------- genuinely-computed dismantling strategies ---------- */
+  function stratMinCost(){          // greedy: remove the cheapest node every step
+    var rm={}, order=[];
+    while(order.length<N){
+      var mn=null, mv=Infinity;
+      ids.forEach(function(id){ if(!rm[id] && nodes[id].cost<mv){ mv=nodes[id].cost; mn=id; } });
+      rm[mn]=1; order.push(mn);
+    }
+    return order;
+  }
+  function stratHDA(){              // adaptive high-degree: recompute residual degree each step
+    var rm={}, order=[];
+    while(order.length<N){
+      var al=aliveList(rm), mn=null, mv=-1;
+      al.forEach(function(id){ var d=residualDeg(id,rm); if(d>mv){ mv=d; mn=id; } });
+      rm[mn]=1; order.push(mn);
+    }
+    return order;
+  }
+  function stratBoundaryCut(){      // paper heuristic: 2-core boundary node, best (#1-shell / cost)
+    var rm={}, order=[];
+    while(order.length<N){
+      var core=coreNumbers(rm), al=aliveList(rm), cand=[];
+      al.forEach(function(id){
+        if(core[id]===2){
+          var ones=adj[id].filter(function(m){ return !rm[m] && core[m]===1; }).length;
+          if(ones>0) cand.push({id:id, ratio:ones/nodes[id].cost});
+        }
+      });
+      var pick;
+      if(cand.length){ cand.sort(function(a,b){ return (b.ratio-a.ratio) || (idx[a.id]-idx[b.id]); }); pick=cand[0].id; }
+      else { var mn=null, mv=-1; al.forEach(function(id){ var d=residualDeg(id,rm); if(d>mv){ mv=d; mn=id; } }); pick=mn; }
+      rm[pick]=1; order.push(pick);
+    }
+    return order;
+  }
+  // REND: true output of the trained model, computed offline on THIS toy network
+  // (dqn.EvaluateRealData on the 27-node graph, degree-cost). It cannot run in-browser.
+  var REND_ORDER = ["A_H","B_H","A_c1","B_c1","B_c3","A_c3","A_c2","A_c4",
+    "A_l0","A_l1","A_l2","A_l3","A_l4","A_l5","A_l6","A_l7","B_c2","B_c4",
+    "B_l0","B_l1","B_l2","B_l3","B_l4","B_l5","B_l6","B_l7","BR"];
+
+  var STRATS = ["mincost","hda","boundarycut","rend"];
   var ORDERS = {
-    mincost: byCost(+1),                 // cheapest first (leaves -> bridge -> cores -> hubs)
-    hda:     byCost(-1),                 // highest degree first
-    rend:    ["BR","A_H","B_H","A_c1","A_c2","A_c3","A_c4","B_c1","B_c2","B_c3","B_c4",
-              "A_l0","A_l1","A_l2","A_l3","A_l4","A_l5","A_l6","A_l7",
-              "B_l0","B_l1","B_l2","B_l3","B_l4","B_l5","B_l6","B_l7"]
+    mincost: stratMinCost(),
+    hda: stratHDA(),
+    boundarycut: stratBoundaryCut(),
+    rend: REND_ORDER.slice()
   };
 
   /* ---------- connectivity ---------- */
@@ -729,14 +785,15 @@
   function setStrategy(s){
     stopTimer();
     strat=s; series=computeSeries(ORDERS[s]); step=0;
-    ["mincost","hda","rend"].forEach(function(k){ document.getElementById("s-"+k).classList.toggle("active",k===s); });
+    STRATS.forEach(function(k){ document.getElementById("s-"+k).classList.toggle("active",k===s); });
     document.getElementById("hint").innerHTML = descOf(s);
     render();
   }
   function descOf(s){
-    if(s==="mincost") return "<b>MinCost / FINDER-like:</b> always remove the cheapest node &mdash; watch it harvest all peripheral leaves first. ANC slides down, but RGCC stays pinned at 1.0: <b>no real fragmentation</b>.";
-    if(s==="hda") return "<b>HDA:</b> remove the highest-degree hub first. It fragments, but hubs are the most expensive nodes &mdash; costly dismantling.";
-    return "<b>REND / Boundary-Cut:</b> strike the bridge &amp; boundary nodes first. The network splits almost immediately &mdash; RGCC plunges after very few, cheap removals.";
+    if(s==="mincost") return "<b>MinCost</b> (computed live): always remove the cheapest node &mdash; it harvests all peripheral leaves first. ANC slides down, yet RGCC stays pinned at 1.0 and it takes <b>17 removals to first fragment</b> the network: the over-removal trap.";
+    if(s==="hda") return "<b>HDA</b> (computed live, adaptive): remove the current highest-degree node each step. It fragments fast &mdash; but hubs are the most expensive nodes.";
+    if(s==="boundarycut") return "<b>Boundary-Cut</b> (computed live): the paper's transparent heuristic &mdash; iteratively remove 2-core boundary nodes with the best (1-shell&nbsp;/&nbsp;cost) ratio. No training, yet it reproduces REND.";
+    return "<b>REND</b> (true trained-model output, computed offline on this network): the deep-RL agent. Its removal order is almost identical to Boundary-Cut &mdash; the black box distilled into a simple rule.";
   }
   function doStep(){
     var lim = manual ? manualOrder.length : ORDERS[strat].length;
@@ -756,13 +813,16 @@
     highlightWinner();
   }
   function highlightWinner(){
-    var best=null,bestv=1e9;
-    ["mincost","hda","rend"].forEach(function(k){
+    var bestv=1e9;
+    STRATS.forEach(function(k){
+      var v=parseFloat(document.getElementById("row-"+k).children[2].textContent);
+      if(!isNaN(v)&&v<bestv) bestv=v;
+    });
+    STRATS.forEach(function(k){
       var row=document.getElementById("row-"+k); row.classList.remove("win");
       var v=parseFloat(row.children[2].textContent);
-      if(!isNaN(v)&&v<bestv){ bestv=v; best=k; }
+      if(!isNaN(v)&&Math.abs(v-bestv)<0.05) row.classList.add("win");
     });
-    if(best) document.getElementById("row-"+best).classList.add("win");
   }
   function reset(){
     stopTimer(); step=0;
@@ -775,7 +835,7 @@
   function toggleManual(){
     manual=!manual; stopTimer(); step=0;
     document.getElementById("btn-manual").innerHTML = "&#9995; Manual explore: "+(manual?"on":"off");
-    ["s-mincost","s-hda","s-rend","btn-play","btn-step"].forEach(function(bid){ document.getElementById(bid).disabled=manual; });
+    ["s-mincost","s-hda","s-boundarycut","s-rend","btn-play","btn-step"].forEach(function(bid){ document.getElementById(bid).disabled=manual; });
     if(manual){ manualOrder=[]; manualSeries=[computeSeries(ORDERS[strat])[0]];
       document.getElementById("hint").innerHTML="<b>Manual explore:</b> click nodes. Try a peripheral leaf (RGCC flat), then the central bridge (RGCC plunge), then a node in a small red fragment (RGCC rises).";
       document.getElementById("explain").className="explain";
@@ -786,6 +846,7 @@
 
   document.getElementById("s-mincost").addEventListener("click",function(){ setStrategy("mincost"); });
   document.getElementById("s-hda").addEventListener("click",function(){ setStrategy("hda"); });
+  document.getElementById("s-boundarycut").addEventListener("click",function(){ setStrategy("boundarycut"); });
   document.getElementById("s-rend").addEventListener("click",function(){ setStrategy("rend"); });
   document.getElementById("btn-step").addEventListener("click",doStep);
   document.getElementById("btn-reset").addEventListener("click",reset);
