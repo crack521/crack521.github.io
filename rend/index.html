@@ -72,11 +72,6 @@
   tr.best td{background:#fff4f4}
   tr.best td.method{color:var(--accent); font-weight:700}
   .tag{display:inline-block; font-size:12px; padding:2px 8px; border-radius:6px; background:var(--code); color:var(--muted); margin-left:6px}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
-  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
-  .stat{background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:16px}
-  .stat .big{font-size:30px; font-weight:800; color:var(--accent); line-height:1.1}
-  .stat .lbl{font-size:14px; color:var(--muted); margin-top:6px}
   pre{background:#0f141a; color:#e8edf3; border-radius:10px; padding:16px 18px; overflow-x:auto; font-size:13.5px; line-height:1.5}
   code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   footer{padding:30px 22px 60px; text-align:center; color:var(--muted); font-size:14px}
@@ -137,8 +132,6 @@
 
   @media (max-width:640px){
     h1.title{font-size:32px}
-    .grid2{grid-template-columns:1fr}
-    .grid3{grid-template-columns:1fr}
     .demo-grid{grid-template-columns:1fr}
     .demo-grid2{grid-template-columns:1fr}
     .rdgrid{grid-template-columns:repeat(2,1fr)}
@@ -186,13 +179,8 @@
       harvest huge numbers of cheap peripheral nodes — optimal in theory, impractical in practice, because every
       removal carries hidden overheads. We fix the metric with the
       <b>Relative Giant Connected Component (RGCC)</b>, train a reinforcement-learning agent <b>REND</b> on it, and
-      then distill the learned policy into a fully transparent heuristic, <b>Boundary-Cut</b>, that needs zero training.
+      then       distill the learned policy into a fully transparent heuristic, <b>Boundary-Cut</b>, that needs zero training.
     </p>
-    <div class="grid3">
-      <div class="stat"><div class="big">&frac12;</div><div class="lbl">the nodes of the best baseline, at equal cost</div></div>
-      <div class="stat"><div class="big">&gt;2&times;</div><div class="lbl">the decline in giant connected component (GCC)</div></div>
-      <div class="stat"><div class="big">6&times;</div><div class="lbl">more fragments produced</div></div>
-    </div>
   </section>
 
   <section id="abstract">
